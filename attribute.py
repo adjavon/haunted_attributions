@@ -2,8 +2,8 @@ from captum.attr import (Saliency, InputXGradient, GuidedBackprop, DeepLift,
                          GuidedGradCam, IntegratedGradients)
 import numpy as np
 import torch
+from torch import nn
 import zarr
-
 
 from data import get_haunted_dataset
 from utils import Vgg2D
@@ -50,30 +50,28 @@ if __name__ == "__main__":
     results["target"] = target
     print("Creating model and loading weights")
     # Get the network and load weights
-    model = Vgg2D(input_size=(256, 256),
-                  fmaps=8,
-                  output_classes=2,
-                  input_fmaps=3)
-    model.load_state_dict(torch.load('models/model.pth'))
+    classifier = Vgg2D(input_size=(256, 256),
+                       fmaps=8,
+                       output_classes=2,
+                       input_fmaps=3)
+    classifier.load_state_dict(torch.load('models/model.pth'))
+    model = nn.Sequential(classifier, nn.Softmax(dim=1))
     model.eval()
     # predict each
     print("Running predictions")
     tensor_img = np.stack([haunted.normalize(img) for img in images])
     tensor_img = torch.from_numpy(tensor_img).contiguous()
     with torch.no_grad():
-        predictions = model(tensor_img)
+        predictions = classifier(tensor_img)
         results["predictions"] = predictions.numpy()
 
     names = ['saliency', 'inputXgradient', 'guided_backprop', 'deeplift',
              'guided_gradcam', 'integrated_gradients']
     attributions = [Saliency(model), InputXGradient(model),
                     GuidedBackprop(model), DeepLift(model),
-                    GuidedGradCam(model, model.features[24]),
+                    GuidedGradCam(model, model[0].features[24]),
                     IntegratedGradients(model)]
     for name, attr in zip(names, attributions):
         print(f"Running {name} attribution.")
         attribution = attr.attribute(tensor_img, target=target)
         results[name] = attribution.detach().numpy()
-    # TODO Plot and save results
-
-
