@@ -2,3 +2,4 @@
 **models/
 **runs/
 **__pycache__/
+*.ipynb

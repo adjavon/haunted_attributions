@@ -1,3 +1,4 @@
+captum
 git+https://github.com/funkelab/funlib.learn.torch.git
 matplotlib
 numpy
@@ -6,3 +7,4 @@ scikit-image
 scikit-learn
 tensorboard
 tqdm
+zarr
