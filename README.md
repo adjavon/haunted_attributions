@@ -9,12 +9,14 @@
 Create a conda environment and install packages:
 ```
 conda create -n haunted pytorch torchvision -c pytorch
+conda activate haunted
 pip install -r requirements.txt
 ```
 
-And make a directory for the data:
+And make a directory for the data and models:
 ```
 mkdir data
+mkdir models
 ```
 
 ### The data
@@ -28,5 +30,5 @@ Additionally we've added fog (in combination with ghosts, or not) in some of the
 
 ## Tasks
 - [x] Make the dataset
-- [ ] Write the traing loop
+- [x] Write the traing loop
 - [ ] Apply and visualize attributions

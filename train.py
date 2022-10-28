@@ -20,14 +20,14 @@ def cycle(iterable):
 
 
 @torch.no_grad()
-def evaluate(model, dataloader):
+def evaluate(model, dataloader, device):
     preds = []
     gt = []
     for x, y in tqdm(dataloader, total=len(dataloader),
                      desc="Validate"):
-        logits = model(x)
+        logits = model(x.to(device))
         pred = torch.argmax(logits, dim=1)
-        preds.append(pred)
+        preds.append(pred.cpu())
         gt.append(y)
     preds = torch.cat(preds)
     gt = torch.cat(gt)
@@ -37,7 +37,9 @@ def evaluate(model, dataloader):
 
 if __name__ == "__main__":
     # General setup
-    iterations = 5000
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    pin_memory = device == "cuda"
+    iterations = 1000
     batch_size = 16
     validate_every = 250
     save_dir = Path("models/")
@@ -45,32 +47,34 @@ if __name__ == "__main__":
     # Create the dataset and dataloader
     haunted = get_haunted_dataset()
     dataloader = DataLoader(haunted, batch_size=batch_size, shuffle=True,
-                            drop_last=True)
+                            drop_last=True, pin_memory=pin_memory)
     data_iter = cycle(dataloader)
     # Validation
     val_dataset = get_haunted_dataset(split="valid")
     val_dl = DataLoader(haunted, batch_size=batch_size*2, shuffle=False,
-                        drop_last=False)
+                        drop_last=False, pin_memory=pin_memory)
     # Create the model, loss, optimizer
     model = Vgg2D(input_size=(256, 256),
                   fmaps=8,
                   output_classes=2,
                   input_fmaps=3)
+    model.to(device)
     bce = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     # Loop
     val_accuracy = 0
     for i in tqdm(range(iterations)):
         x, y = next(data_iter)
+        x = x.to(device)
+        y = y.to(device)
         optimizer.zero_grad()
         pred = model(x)
         loss = bce(pred, y)
         loss.backward()
         optimizer.step()
         if i > 0 and i % validate_every == 0:
-            print(i)
             # validate
-            accuracy = evaluate(model, dataloader)
+            accuracy = evaluate(model, dataloader, device)
             print(accuracy)
             # Add to tensorboard
             tboard.add_scalar("train/loss", loss.item(),
