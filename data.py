@@ -78,7 +78,7 @@ def create_examples(haunted):
     fig, axes = plt.subplots(3, 5)
     for i, ax in enumerate(axes.ravel()):
         ghost_im, y = haunted[i]
-        ax.imshow(ghost_im)
+        ax.imshow(haunted.unnormalize(ghost_im))
         ax.axis('off')
         ax.set_title(classes[y])
     plt.savefig("examples.png", bbox_inches="tight")
@@ -101,10 +101,19 @@ class HauntedDataset(Dataset):
         elif p < 0.5:
             # Add a ghost
             img = self.add_ghost(img)
-            return img, 1
         else:
-            return np.array(img), 0
-        return img, 1
+            return self.normalize(np.array(img)), 0
+        return self.normalize(img), 1
+
+    def normalize(self, img):
+        # Normalize and HWC to CHW
+        img = np.moveaxis(img / 255., -1, 0)
+        return img.astype(np.float32)
+
+    def unnormalize(self, img):
+        # CHW  to HWC and put back to uint8
+        img = np.moveaxis(img*255, 0, -1)
+        return img.astype(np.uint8)
 
     def __len__(self):
         return len(self.dataset)
@@ -134,12 +143,18 @@ class HauntedDataset(Dataset):
         return background.astype(np.uint8)
 
 
+def get_haunted_dataset(split='train'):
+    transform = transforms.CenterCrop(256)
+    base = Country211("./data", split=split, download=True,
+                      transform=transform)
+    haunted = HauntedDataset(base)
+    return haunted
+
+
 if __name__ == "__main__":
     if not Path("characters.png").exists():
         create_characters()
     if not Path("examples.png").exists():
-        transform = transforms.CenterCrop(250)
-        base = Country211("./data", download=True, transform=transform)
-        haunted = HauntedDataset(base)
+        haunted = get_haunted_dataset()
         create_examples(haunted)
 

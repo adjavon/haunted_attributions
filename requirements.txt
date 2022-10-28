@@ -1,4 +1,8 @@
+git+https://github.com/funkelab/funlib.learn.torch.git
 matplotlib
 numpy
 opencv-python
 scikit-image
+scikit-learn
+tensorboard
+tqdm
